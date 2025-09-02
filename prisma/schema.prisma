@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        String     @id @default(cuid())
+  name      String
+  createdAt DateTime   @default(now())
+  shipments Shipment[]
+}
+
+model Carrier {
+  id          String              @id @default(cuid())
+  name        String
+  createdAt   DateTime            @default(now())
+  assignments CarrierAssignment[]
+}
+
+model Location {
+  id      String @id @default(cuid())
+  name    String
+  line1   String
+  city    String
+  state   String
+  postal  String
+  country String
+  geoLat  Float?
+  geoLng  Float?
+  stops   Stop[]
+}
+
+model Shipment {
+  id                String             @id @default(cuid())
+  customerId        String
+  customer          Customer           @relation(fields: [customerId], references: [id])
+  reference         String?
+  status            ShipmentStatus     @default(DRAFT)
+  createdAt         DateTime           @default(now())
+  stops             Stop[]
+  carrierAssignment CarrierAssignment?
+  customerRate      CustomerRate?
+  checkCalls        CheckCall[]
+}
+
+enum ShipmentStatus {
+  DRAFT
+  PLANNED
+  IN_TRANSIT
+  DELIVERED
+  CLOSED
+  CANCELLED
+}
+
+model Stop {
+  id          String    @id @default(cuid())
+  shipmentId  String
+  shipment    Shipment  @relation(fields: [shipmentId], references: [id])
+  sequence    Int
+  type        StopType
+  locationId  String
+  location    Location  @relation(fields: [locationId], references: [id])
+  windowStart DateTime?
+  windowEnd   DateTime?
+  notes       String?
+}
+
+enum StopType {
+  PICKUP
+  DELIVERY
+}
+
+model CarrierAssignment {
+  id           String   @id @default(cuid())
+  shipmentId   String   @unique
+  shipment     Shipment @relation(fields: [shipmentId], references: [id])
+  carrierId    String
+  carrier      Carrier  @relation(fields: [carrierId], references: [id])
+  baseRate     Float    @default(0)
+  fuelPct      Float    @default(0)
+  accessorials Json     @default("[]")
+  currency     String   @default("USD")
+  createdAt    DateTime @default(now())
+}
+
+model CustomerRate {
+  id           String   @id @default(cuid())
+  shipmentId   String   @unique
+  shipment     Shipment @relation(fields: [shipmentId], references: [id])
+  baseRate     Float    @default(0)
+  fuelPct      Float    @default(0)
+  accessorials Json     @default("[]")
+  currency     String   @default("USD")
+  createdAt    DateTime @default(now())
+}
+
+model CheckCall {
+  id         String   @id @default(cuid())
+  shipmentId String
+  shipment   Shipment @relation(fields: [shipmentId], references: [id])
+  ts         DateTime @default(now())
+  code       String
+  notes      String?
+  lat        Float?
+  lng        Float?
+}
